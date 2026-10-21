@@ -4,17 +4,17 @@ Pilot app for ranking trendy cafés and restaurants in Lima, starting with Miraf
 
 ## What works today
 
-- **Onboarding**: name and @usuario.
+- **Sign-in and onboarding**: email code, then name and @usuario. Data is saved to Supabase ([docs/BACKEND.md](docs/BACKEND.md)).
 - **Descubrir**: search, filter by district (Miraflores, Barranco) and type (cafés, brunch, panaderías, restaurantes, bares, "Nuevos"), list or map view.
 - **Rank a visit**: optional one-line note and photo, pick how it felt (Me encantó / Estuvo bien / No me gustó), then answer a few "¿cuál te gustó más?" questions. Binary search places it in your list and gives a score out of 10.
 - **Mi lista**: your ranked places and a "Quiero ir" (want to go) list.
 - **Share**: a 9:16 image of your top 5, sized for Instagram Stories and TikTok.
-- **Amigos**: invite button (native share sheet) and a friends feed.
+- **Amigos**: invite button (native share sheet), follow by @usuario, and a feed of what the people you follow rank.
 - **Add a place** that is missing.
 
 ## Not done yet (needs decisions or accounts)
 
-- **Backend.** Everything is stored on the phone. The friends feed shows clearly labelled sample activity. Real friends, invites and sync need a Supabase project: see [docs/BACKEND.md](docs/BACKEND.md).
+- **Sign-in email setup.** Two Supabase dashboard settings (email template and an email sender) before pilot users can sign in: see [docs/BACKEND.md](docs/BACKEND.md#sign-in). Photos are not uploaded yet.
 - **Venue list.** 20 starter places in `src/lib/venues.ts`. Every pin is approximate and unverified. Grow it to about 120 with [docs/venues.csv](docs/venues.csv), and mark new openings with `isNew`.
 - **Google Maps key for Android store builds** (the map works in Expo Go without one). Add it under `android.config.googleMaps.apiKey` in `app.json`.
 - **Name, icon and splash** are placeholders.

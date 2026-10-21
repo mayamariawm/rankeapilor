@@ -1,31 +1,68 @@
-import { router } from 'expo-router';
-import { FlatList, Share, Text, View } from 'react-native';
+import { router, useFocusEffect } from 'expo-router';
+import { useCallback, useState } from 'react';
+import { FlatList, Share, Text, TextInput, View } from 'react-native';
 import { Button, Row, ScoreBadge, styles } from '../../components/ui';
-import { DEMO_ACTIVITY } from '../../lib/demoFriends';
+import { ago, followHandle, useFriendFeed } from '../../lib/friends';
 import { useStore } from '../../lib/store';
 import { colors } from '../../lib/theme';
 
-const ago = (h: number) => (h < 24 ? `hace ${h} h` : `hace ${Math.round(h / 24)} d`);
-
 export default function Friends() {
   const { placeById, state } = useStore();
+  const { items, loading, refresh } = useFriendFeed();
+  const [handle, setHandle] = useState('');
+  const [message, setMessage] = useState<string | null>(null);
+
+  useFocusEffect(
+    useCallback(() => {
+      refresh();
+    }, [refresh]),
+  );
 
   const invite = () =>
     Share.share({
-      message: `Estoy rankeando los cafés y restaurantes más lindos de Lima en Rankea. Únete al piloto con mi invitación: @${state.user?.handle}`,
+      message: `Estoy rankeando los cafés y restaurantes más lindos de Lima en Rankea. Únete al piloto y sígueme: @${state.user?.handle}`,
     });
+
+  const follow = async () => {
+    const error = await followHandle(handle);
+    setMessage(error ?? `Ahora sigues a @${handle.replace(/^@/, '')}.`);
+    if (!error) {
+      setHandle('');
+      refresh();
+    }
+  };
 
   return (
     <FlatList
       style={styles.screen}
-      data={DEMO_ACTIVITY}
+      data={items}
       keyExtractor={(a) => a.id}
       contentContainerStyle={{ padding: 16 }}
+      refreshing={loading}
+      onRefresh={refresh}
       ListHeaderComponent={
         <View style={{ gap: 10, marginBottom: 16 }}>
           <Button title="Invitar amigos" onPress={invite} />
-          <Text style={styles.muted}>Actividad de ejemplo hasta conectar el servidor de amigos.</Text>
+          <View style={{ flexDirection: 'row', gap: 8 }}>
+            <TextInput
+              style={[styles.input, { flex: 1 }]}
+              placeholder="Seguir a @usuario"
+              placeholderTextColor={colors.muted}
+              value={handle}
+              onChangeText={setHandle}
+              autoCapitalize="none"
+              autoCorrect={false}
+              onSubmitEditing={follow}
+            />
+            <Button title="Seguir" kind="secondary" onPress={follow} disabled={handle.replace(/^@/, '').length < 3} />
+          </View>
+          {message ? <Text style={styles.muted}>{message}</Text> : null}
         </View>
+      }
+      ListEmptyComponent={
+        loading ? undefined : (
+          <Text style={styles.muted}>Sigue a tus amigos por su @usuario para ver lo que rankean.</Text>
+        )
       }
       renderItem={({ item }) => {
         const place = placeById(item.placeId);
@@ -39,7 +76,7 @@ export default function Friends() {
               </Text>
               {item.note ? <Text style={styles.body}>“{item.note}”</Text> : null}
               <Text style={styles.muted}>
-                {place.district} · {ago(item.hoursAgo)}
+                {place.district} · {ago(item.date)}
               </Text>
             </View>
             <ScoreBadge score={item.score} sentiment={item.sentiment} />

@@ -26,14 +26,13 @@ export type Visit = {
   date: string; // ISO
 };
 
-export type User = { name: string; handle: string };
+export type User = { id: string; name: string; handle: string };
 
 export type AppState = {
   user: User | null;
   visits: Record<string, Visit>;
   buckets: Buckets;
   saved: string[];
-  customPlaces: Place[];
 };
 
 export const CATEGORY_LABELS: Record<Category, string> = {
