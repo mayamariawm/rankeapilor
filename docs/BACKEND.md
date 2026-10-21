@@ -21,10 +21,10 @@ Rankings are public to signed-in users, which fits a "see what your friends rank
 
 ## Sign-in
 
-The app signs people in with a 6-digit code sent by email (Supabase email OTP, on by default). Two settings in the Supabase dashboard are needed before pilot users can sign in:
+The app signs people in with a 6-digit code sent by email (Supabase email OTP, on by default). Two settings in the Supabase dashboard are needed before pilot users can sign in, in this order (Supabase only lets you edit templates once a custom sender is set):
 
-1. **Email template.** Authentication → Emails → Templates → "Magic Link": add `{{ .Token }}` to the body so the email shows the code, for example `<p>Tu código de Rankea: <strong>{{ .Token }}</strong></p>`.
-2. **Email sender.** Supabase's built-in email only delivers to members of your Supabase organization and only a few per hour. For pilot users, add a custom SMTP sender under Authentication → Emails → SMTP Settings (for example Resend or Brevo, both with free tiers).
+1. **Email sender.** Authentication → Emails → SMTP Settings. Supabase's built-in email only delivers to members of your Supabase organization and only a few per hour. Without a domain, Gmail works for the pilot: host `smtp.gmail.com`, port `465`, your Gmail address as username and sender, and a Google app password (about 500 emails a day). With a domain, use Resend or Brevo.
+2. **Email template.** Authentication → Emails → Templates → "Magic link or OTP": replace the body with something that shows `{{ .Token }}`, for example `<p>Tu código de Rankea: <strong>{{ .Token }}</strong></p>`.
 
 Google or phone (SMS) sign-in can be added later. Phone needs a paid SMS provider such as Twilio.
 
