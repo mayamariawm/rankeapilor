@@ -2,10 +2,12 @@ import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import {
   answer,
+  bucketsFromRows,
   emptyBuckets,
   insertPlace,
   pivotIndex,
   rankedList,
+  rankingRows,
   scoreAt,
   scoreFor,
   startComparison,
@@ -59,4 +61,17 @@ test('re-ranking moves a place instead of duplicating it', () => {
   assert.deepEqual(list.map((e) => [e.placeId, e.rank]), [['y', 1], ['x', 2]]);
   assert.equal(scoreFor(b, 'x'), 6.7);
   assert.equal(scoreFor(b, 'zzz'), null);
+});
+
+test('server rows round-trip back to the same buckets', () => {
+  let b = emptyBuckets();
+  b = insertPlace(b, 'loved', 0, 'a');
+  b = insertPlace(b, 'loved', 0, 'b');
+  b = insertPlace(b, 'fine', 0, 'c');
+  const rows = rankingRows(b);
+  assert.deepEqual(
+    rows.map((r) => [r.place_id, r.position, r.score]),
+    [['b', 0, 10], ['a', 1, 6.8], ['c', 0, 6.7]],
+  );
+  assert.deepEqual(bucketsFromRows([...rows].reverse()), b);
 });

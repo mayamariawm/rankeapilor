@@ -1,86 +1,34 @@
-# Backend plan (Supabase)
+# Backend (Supabase)
 
-The pilot needs a server for three things: friends and their feed, invite codes, and one shared venue list. Supabase's free tier covers 300 pilot users.
+The app talks to the Supabase project **rankea-pilot** (region São Paulo, `sa-east-1`, free plan) for sign-in, rankings, "Quiero ir", places, friends and the friends feed.
 
-## Steps
+- Project URL and publishable key are in `.env`. Both are public by design: they ship inside the app, and row level security decides what each user can read or write. Never put the secret (`service_role`) key in the repo.
+- The schema is in [`supabase/migrations/20261021180000_initial_schema.sql`](../supabase/migrations/20261021180000_initial_schema.sql). It is already applied. Add later changes as new files in that folder.
 
-1. Create a free project at supabase.com (region: São Paulo is closest to Lima).
-2. Run the SQL below in the SQL editor.
-3. Turn on phone (SMS) or Google sign-in under Authentication.
-4. Put the project URL and anon key in `.env` as `EXPO_PUBLIC_SUPABASE_URL` and `EXPO_PUBLIC_SUPABASE_ANON_KEY`.
-5. Swap the AsyncStorage calls in `src/lib/store.tsx` for Supabase queries, and replace `DEMO_ACTIVITY` with the `friend_feed` view.
+## Tables
 
-## Schema
+| Table | What it holds | Who can read | Who can write |
+| --- | --- | --- | --- |
+| `profiles` | name and @usuario | signed-in users | the owner |
+| `places` | venues (20 seeded from `src/lib/venues.ts`) | everyone | signed-in users can add, unverified |
+| `rankings` | one row per user per place: bucket, position, score, note | signed-in users | the owner |
+| `saved` | "Quiero ir" list | the owner | the owner |
+| `follows` | who follows whom | signed-in users | the follower |
+| `invites` | invite codes (not used by the app yet) | the owner | the owner |
+| `friend_feed` (view) | rankings by people you follow | runs with the caller's permissions | |
 
-```sql
-create table profiles (
-  id uuid primary key references auth.users on delete cascade,
-  name text not null,
-  handle text unique not null check (handle ~ '^[a-z0-9._]{3,24}$'),
-  invited_by uuid references profiles,
-  created_at timestamptz default now()
-);
+Rankings are public to signed-in users, which fits a "see what your friends rank" app. Tighten to followers only if pilot users ask for privacy.
 
-create table places (
-  id text primary key,
-  name text not null,
-  district text not null check (district in ('Miraflores', 'Barranco')),
-  category text not null,
-  lat double precision not null,
-  lng double precision not null,
-  is_new boolean default false,
-  verified boolean default false,
-  added_by uuid references profiles
-);
+## Sign-in
 
--- One row per user per place. position orders places within a sentiment bucket.
-create table rankings (
-  user_id uuid references profiles on delete cascade,
-  place_id text references places,
-  sentiment text not null check (sentiment in ('loved', 'fine', 'disliked')),
-  position int not null,
-  score numeric(3, 1) not null,
-  note text check (char_length(note) <= 120),
-  photo_path text,
-  created_at timestamptz default now(),
-  primary key (user_id, place_id)
-);
+The app signs people in with a 6-digit code sent by email (Supabase email OTP, on by default). Two settings in the Supabase dashboard are needed before pilot users can sign in, in this order (Supabase only lets you edit templates once a custom sender is set):
 
-create table follows (
-  follower uuid references profiles on delete cascade,
-  followee uuid references profiles on delete cascade,
-  primary key (follower, followee)
-);
+1. **Email sender.** Authentication → Emails → SMTP Settings. Supabase's built-in email only delivers to members of your Supabase organization and only a few per hour. Without a domain, Gmail works for the pilot: host `smtp.gmail.com`, port `465`, your Gmail address as username and sender, and a Google app password (about 500 emails a day). With a domain, use Resend or Brevo.
+2. **Email template.** Authentication → Emails → Templates → "Magic link or OTP": replace the body with something that shows `{{ .Token }}`, for example `<p>Tu código de Rankea: <strong>{{ .Token }}</strong></p>`.
 
-create table invites (
-  code text primary key,
-  owner uuid references profiles on delete cascade,
-  uses int default 0,
-  max_uses int default 5
-);
+Google or phone (SMS) sign-in can be added later. Phone needs a paid SMS provider such as Twilio.
 
-create view friend_feed as
-  select r.*, p.name as friend_name, p.handle
-  from rankings r
-  join follows f on f.followee = r.user_id
-  join profiles p on p.id = r.user_id
-  where f.follower = auth.uid();
+## Known gaps
 
-alter table profiles enable row level security;
-alter table rankings enable row level security;
-alter table follows enable row level security;
-alter table places enable row level security;
-alter table invites enable row level security;
-
-create policy "profiles readable" on profiles for select using (true);
-create policy "own profile" on profiles for all using (id = auth.uid());
-create policy "rankings readable" on rankings for select using (true);
-create policy "own rankings" on rankings for all using (user_id = auth.uid());
-create policy "follows readable" on follows for select using (true);
-create policy "own follows" on follows for all using (follower = auth.uid());
-create policy "places readable" on places for select using (true);
-create policy "add places" on places for insert with check (added_by = auth.uid());
-create policy "own invites" on invites for all using (owner = auth.uid());
-```
-
-Rankings are public to signed-in users in this sketch, which fits a "see what your friends rank" app. Tighten it to followers only if pilot users ask for privacy.
+- Photos are stored as a path on the phone that took them, so friends do not see them yet. Next step: upload to Supabase Storage.
+- Invite codes exist in the schema but the app shares your @usuario instead; friends follow you by @usuario.

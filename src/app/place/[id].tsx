@@ -1,7 +1,7 @@
 import { Stack, router, useLocalSearchParams } from 'expo-router';
 import { Image, Linking, ScrollView, Text, View } from 'react-native';
 import { Button, NewTag, ScoreBadge, placeSubtitle, styles } from '../../components/ui';
-import { DEMO_ACTIVITY } from '../../lib/demoFriends';
+import { useFriendFeed } from '../../lib/friends';
 import { rankedList } from '../../lib/ranking';
 import { useStore } from '../../lib/store';
 import { colors } from '../../lib/theme';
@@ -11,12 +11,12 @@ export default function PlaceScreen() {
   const { id } = useLocalSearchParams<{ id: string }>();
   const { placeById, state, toggleSaved, unrankPlace } = useStore();
   const place = placeById(id);
+  const { items: friends } = useFriendFeed(id);
   if (!place) return <Text style={[styles.muted, { padding: 24 }]}>No encontramos este lugar.</Text>;
 
   const mine = rankedList(state.buckets).find((r) => r.placeId === place.id);
   const visit = state.visits[place.id];
   const saved = state.saved.includes(place.id);
-  const friends = DEMO_ACTIVITY.filter((a) => a.placeId === place.id);
   const mapsUrl = `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(`${place.name} ${place.district} Lima`)}`;
 
   return (
@@ -65,7 +65,6 @@ export default function PlaceScreen() {
               </View>
             </View>
           ))}
-          <Text style={styles.muted}>Amigos de ejemplo hasta conectar el servidor.</Text>
         </View>
       )}
 

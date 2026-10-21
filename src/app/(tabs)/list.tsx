@@ -7,13 +7,22 @@ import { useStore } from '../../lib/store';
 import { colors } from '../../lib/theme';
 
 export default function MyList() {
-  const { state, placeById } = useStore();
+  const { state, placeById, signOut } = useStore();
   const [tab, setTab] = useState<'ranked' | 'saved'>('ranked');
   const ranked = rankedList(state.buckets);
 
   return (
     <View style={styles.screen}>
-      <Stack.Screen options={{ headerTitle: state.user ? `@${state.user.handle}` : 'Mi lista' }} />
+      <Stack.Screen
+        options={{
+          headerTitle: state.user ? `@${state.user.handle}` : 'Mi lista',
+          headerRight: () => (
+            <Text onPress={signOut} style={[styles.muted, { marginRight: 16 }]}>
+              Salir
+            </Text>
+          ),
+        }}
+      />
       <View style={{ flexDirection: 'row', paddingHorizontal: 16, paddingTop: 8, paddingBottom: 12 }}>
         <Chip label={`Rankeados (${ranked.length})`} active={tab === 'ranked'} onPress={() => setTab('ranked')} />
         <Chip label={`Quiero ir (${state.saved.length})`} active={tab === 'saved'} onPress={() => setTab('saved')} />

@@ -85,3 +85,30 @@ export function scoreFor(buckets: Buckets, placeId: string): number | null {
   }
   return null;
 }
+
+/** A ranking as stored on the server: one row per place, ordered by position within its bucket. */
+export type RankingRow = { place_id: string; sentiment: Sentiment; position: number; score: number };
+
+/** Every ranked place as a row. Inserting one place shifts the positions and scores of its neighbours, so a sync writes them all. */
+export function rankingRows(buckets: Buckets): RankingRow[] {
+  return SENTIMENTS.flatMap((s) =>
+    buckets[s].map((place_id, position) => ({
+      place_id,
+      sentiment: s,
+      position,
+      score: scoreAt(s, position, buckets[s].length),
+    })),
+  );
+}
+
+/** Rebuilds the buckets from server rows, whatever order they arrive in. */
+export function bucketsFromRows(rows: Pick<RankingRow, 'place_id' | 'sentiment' | 'position'>[]): Buckets {
+  const buckets = emptyBuckets();
+  for (const s of SENTIMENTS) {
+    buckets[s] = rows
+      .filter((r) => r.sentiment === s)
+      .sort((a, b) => a.position - b.position)
+      .map((r) => r.place_id);
+  }
+  return buckets;
+}

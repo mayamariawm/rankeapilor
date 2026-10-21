@@ -18,10 +18,19 @@ export default function AddPlace() {
   const [name, setName] = useState('');
   const [district, setDistrict] = useState<District>('Barranco');
   const [category, setCategory] = useState<Category>('cafe');
+  const [saving, setSaving] = useState(false);
+  const [error, setError] = useState<string | null>(null);
 
-  const save = () => {
-    const place = addPlace({ name: name.trim(), district, category, ...CENTRE[district], isNew: true });
-    router.replace(`/rank/${place.id}`);
+  const save = async () => {
+    setSaving(true);
+    setError(null);
+    try {
+      const place = await addPlace({ name: name.trim(), district, category, ...CENTRE[district], isNew: true });
+      router.replace(`/rank/${place.id}`);
+    } catch {
+      setError('No pudimos agregar el lugar. Revisa tu conexión.');
+      setSaving(false);
+    }
   };
 
   return (
@@ -46,7 +55,8 @@ export default function AddPlace() {
           <Chip key={c} label={CATEGORY_SINGULAR[c]} active={category === c} onPress={() => setCategory(c)} />
         ))}
       </View>
-      <Button title="Agregar y rankear" onPress={save} disabled={name.trim().length < 2} />
+      {error ? <Text style={styles.muted}>{error}</Text> : null}
+      <Button title="Agregar y rankear" onPress={save} disabled={saving || name.trim().length < 2} />
     </ScrollView>
   );
 }
